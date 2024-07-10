@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "NUC029xAN.h"
+#include <stdint.h>
 
 void SYS_Init(void) {
 
@@ -32,23 +33,25 @@ void SYS_Init(void) {
 	/* Enable IP clock */
     CLK_EnableModuleClock(PWM01_MODULE);
     CLK_EnableModuleClock(UART0_MODULE);
+    CLK_EnableModuleClock(ADC_MODULE);
 
     CLK_SetModuleClock(PWM01_MODULE, CLK_CLKSEL1_PWM01_S_HIRC, MODULE_NoMsk);
     CLK_SetModuleClock(UART0_MODULE, CLK_CLKSEL1_UART_S_HXT, CLK_CLKDIV_UART(1));
+    CLK_SetModuleClock(ADC_MODULE,CLK_CLKSEL1_ADC_S_HIRC,CLK_CLKDIV_ADC(1));
 
-	CLK->APBCLK = 0
-		   |CLK_APBCLK_UART0_EN_Msk
-	       |CLK_APBCLK_TMR0_EN_Msk
-		   |CLK_APBCLK_PWM01_EN_Msk
-		   |CLK_APBCLK_PWM23_EN_Msk;
+    CLK->APBCLK = 0
+		    |CLK_APBCLK_UART0_EN_Msk
+	        |CLK_APBCLK_TMR0_EN_Msk
+		    |CLK_APBCLK_PWM01_EN_Msk
+		    |CLK_APBCLK_PWM23_EN_Msk
+			|CLK_APBCLK_ADC_EN_Msk;
 
 	CLK->CLKSEL1 = 0
 			|CLK_CLKSEL1_UART_S_Msk //TRM sayfa 213  clock select HIRC
-	        | (0 << CLK_CLKSEL1_TMR0_S_Pos);
-
-    CLK->CLKSEL2 = 0
-    		|CLK_CLKSEL1_PWM01_S_HXT
-    		|CLK_CLKSEL1_PWM23_S_HXT;
+	        |(0 << CLK_CLKSEL1_TMR0_S_Pos)
+			|(3<<CLK_CLKSEL1_ADC_S_Pos)
+	        |CLK_CLKSEL1_PWM01_S_HXT
+	    	|CLK_CLKSEL1_PWM23_S_HXT;
 
 //	A = 0x0502;
 //	A = (A & 0xF0FF);
@@ -59,7 +62,8 @@ void SYS_Init(void) {
 	SystemCoreClockUpdate();
 
 	/* Set P3 multi-function pins for UART0 RXD and TXD  */
-    SYS->P2_MFP |= (SYS_MFP_P20_PWM0);
+    SYS->P1_MFP |= (SYS_MFP_P10_AIN0);
+	SYS->P2_MFP |= (SYS_MFP_P20_PWM0);
 	SYS->P3_MFP = 0
 			|SYS_MFP_P30_RXD0
 			|SYS_MFP_P31_TXD0
@@ -69,10 +73,12 @@ void SYS_Init(void) {
 	/* Lock protected registers */
 	SYS_LockReg();
 }
+
 int main() {
 	SYS_Init();
 
 	UART_Init();
+
     PWMA->PPR = (PWMB->PPR & ~(PWM_PPR_CP01_Msk)) | (24 << PWM_PPR_CP01_Pos);
     PWMA->CSR = (PWMA->CSR & ~(PWM_CSR_CSR0_Msk)) | (PWM_CLK_DIV_4 << PWM_CSR_CSR0_Pos);
     PWMA->PCR |= PWM_PCR_CH0MOD_Msk;
@@ -81,6 +87,9 @@ int main() {
     PWMA->POE |= PWM_POE_PWM0_Msk;
     PWMA->PCR |= PWM_PCR_CH0EN_Msk;
 	PWMA->PIER = PWM_PIER_PWMIE0_Msk;
+
+
+
 
 
 	TIMER0->TCSR = 0
@@ -96,13 +105,17 @@ int main() {
 	UART0->IER = 0
 			| UART_IER_RDA_IEN_Msk
 			| UART_IER_THRE_IEN_Msk;
+
 	P35=0;
 
 	NVIC_EnableIRQ(PWMA_IRQn);
-	NVIC_EnableIRQ(UART0_IRQn);
+	//NVIC_EnableIRQ(UART0_IRQn);
 	NVIC_EnableIRQ(TMR0_IRQn);
 
-	while (1);
+	while (1){
+		GetPotVal();
+		for(volatile uint32_t t = 0 ;t < 1000000;t++);
+	};
 }
 
 /*** (C) COPYRIGHT 2014 Nuvoton Technology Corp. ***/

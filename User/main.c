@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "NUC029xAN.h"
-#include <stdint.h>
 
 void SYS_Init(void) {
 
@@ -34,6 +33,7 @@ void SYS_Init(void) {
     CLK_EnableModuleClock(PWM01_MODULE);
     CLK_EnableModuleClock(UART0_MODULE);
     CLK_EnableModuleClock(ADC_MODULE);
+    CLK_EnableModuleClock(I2C0_MODULE);
 
     CLK_SetModuleClock(PWM01_MODULE, CLK_CLKSEL1_PWM01_S_HIRC, MODULE_NoMsk);
     CLK_SetModuleClock(UART0_MODULE, CLK_CLKSEL1_UART_S_HXT, CLK_CLKDIV_UART(1));
@@ -42,6 +42,7 @@ void SYS_Init(void) {
     CLK->APBCLK = 0
 		    |CLK_APBCLK_UART0_EN_Msk
 	        |CLK_APBCLK_TMR0_EN_Msk
+	        |CLK_APBCLK_TMR1_EN_Msk
 		    |CLK_APBCLK_PWM01_EN_Msk
 		    |CLK_APBCLK_PWM23_EN_Msk
 			|CLK_APBCLK_ADC_EN_Msk;
@@ -49,26 +50,26 @@ void SYS_Init(void) {
 	CLK->CLKSEL1 = 0
 			|CLK_CLKSEL1_UART_S_Msk //TRM sayfa 213  clock select HIRC
 	        |(0 << CLK_CLKSEL1_TMR0_S_Pos)
+			|(0 << CLK_CLKSEL1_TMR1_S_Pos)
 			|(3<<CLK_CLKSEL1_ADC_S_Pos)
 	        |CLK_CLKSEL1_PWM01_S_HXT
 	    	|CLK_CLKSEL1_PWM23_S_HXT;
-
-//	A = 0x0502;
-//	A = (A & 0xF0FF);
-//	A = A & ~(0xF << 8);
 
 	/* Update System Core Clock */
 	/* User can use SystemCoreClockUpdate() to calculate SystemCoreClock and cyclesPerUs automatically. */
 	SystemCoreClockUpdate();
 
 	/* Set P3 multi-function pins for UART0 RXD and TXD  */
-    SYS->P1_MFP |= (SYS_MFP_P10_AIN0);
+    SYS->P1_MFP = 0
+    		|(SYS_MFP_P10_AIN0)
+			|(SYS_MFP_P11_AIN1);
 	SYS->P2_MFP |= (SYS_MFP_P20_PWM0);
 	SYS->P3_MFP = 0
 			|SYS_MFP_P30_RXD0
 			|SYS_MFP_P31_TXD0
-            |SYS_MFP_P35_GPIO
-	        |SYS_MFP_P34_T0;
+            |SYS_MFP_P37_GPIO
+	        |SYS_MFP_P34_SDA0
+			|SYS_MFP_P35_SCL0;
 
 	/* Lock protected registers */
 	SYS_LockReg();
@@ -77,8 +78,9 @@ void SYS_Init(void) {
 int main() {
 	SYS_Init();
 
-	UART_Init();
+	SerialPortInit();
 
+	AdcInit();
     PWMA->PPR = (PWMB->PPR & ~(PWM_PPR_CP01_Msk)) | (24 << PWM_PPR_CP01_Pos);
     PWMA->CSR = (PWMA->CSR & ~(PWM_CSR_CSR0_Msk)) | (PWM_CLK_DIV_4 << PWM_CSR_CSR0_Pos);
     PWMA->PCR |= PWM_PCR_CH0MOD_Msk;
@@ -88,32 +90,24 @@ int main() {
     PWMA->PCR |= PWM_PCR_CH0EN_Msk;
 	PWMA->PIER = PWM_PIER_PWMIE0_Msk;
 
+	TimmingPortInit();
+	TimmingTask();
 
-
-
-
-	TIMER0->TCSR = 0
-				| TIMER_TCSR_IE_Msk
-				| (2 << TIMER_TCSR_MODE_Pos)
-				| TIMER_TOGGLE_MODE
-				| TIMER_TCSR_CEN_Msk
-				| (25 << TIMER_TCSR_PRESCALE_Pos);
-
-	TIMER0->TCMPR = 86400; // 1ms period
-	P3->PMD |= (1 << GPIO_PMD_PMD5_Pos); //P3.5 output mode
-
-	UART0->IER = 0
-			| UART_IER_RDA_IEN_Msk
-			| UART_IER_THRE_IEN_Msk;
-
-	P35=0;
-
-	NVIC_EnableIRQ(PWMA_IRQn);
 	//NVIC_EnableIRQ(UART0_IRQn);
-	NVIC_EnableIRQ(TMR0_IRQn);
+	NVIC_EnableIRQ(PWMA_IRQn);
 
 	while (1){
-		GetPotVal();
+//		TimmingGetMs();
+//		TimmingDiffMs();
+		AdcGetChannelVoltage(0);
+		AdcGetChannelVoltage(1);
+//		SerialPortTask();
+//		SerialPortReceiverGetByte();
+//		SerialPortReceiverClear();
+//		SerialPortTransmitterWriteByte();
+//		SerialPortTransmitterSend();
+
+
 		for(volatile uint32_t t = 0 ;t < 1000000;t++);
 	};
 }

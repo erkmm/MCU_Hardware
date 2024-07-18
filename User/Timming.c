@@ -27,17 +27,16 @@ void TimmingPortInit(){
 					| TIMER_TCSR_CEN_Msk
 					| (25 << TIMER_TCSR_PRESCALE_Pos);
 
-
+	TIMER0->TCMPR = 86400; // 1ms period
+	P3->PMD |= (1 << GPIO_PMD_PMD7_Pos); //P3.7 output mode
+	P37=0;
+	NVIC_EnableIRQ(TMR0_IRQn);
 }
 void TimmingTask() {
-	TIMER0->TCMPR = 86400; // 1ms period
-
-	P3->PMD |= (1 << GPIO_PMD_PMD7_Pos); //P3.7 output mode
-
-	P37=0;
-
-	NVIC_EnableIRQ(TMR0_IRQn);
+//		TimmingGetMs();
+//		TimmingDiffMs();
 	}
+
 void TimmingGetMs() {
 	TIMER0->TCSR |= TIMER_TCSR_TDR_EN_Msk;
 	TIMER1->TCSR |= TIMER_TCSR_TDR_EN_Msk;
@@ -47,10 +46,9 @@ void TimmingGetMs() {
 	printf("\ntimer is %d ms\n",timer);
 	//printf("sayac is %d\n",sayac);
 	//printf("timer2 is %d ms\n",timer2);
-
 }
-void TimmingDiffMs() {
 
+void TimmingDiffMs() {
 	uint32_t diff = timer- timer2;
 	//printf("difference is %d ms\n",diff);
 	}

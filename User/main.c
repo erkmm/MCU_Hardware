@@ -63,7 +63,11 @@ void SYS_Init(void) {
     SYS->P1_MFP = 0
     		|(SYS_MFP_P10_AIN0)
 			|(SYS_MFP_P11_AIN1);
-	SYS->P2_MFP |= (SYS_MFP_P20_PWM0);
+
+	SYS->P2_MFP = 0
+			|SYS_MFP_P21_PWM1
+			|SYS_MFP_P20_PWM0;
+
 	SYS->P3_MFP = 0
 			|SYS_MFP_P30_RXD0
 			|SYS_MFP_P31_TXD0
@@ -81,33 +85,17 @@ int main() {
 	SerialPortInit();
 
 	AdcInit();
-    PWMA->PPR = (PWMB->PPR & ~(PWM_PPR_CP01_Msk)) | (24 << PWM_PPR_CP01_Pos);
-    PWMA->CSR = (PWMA->CSR & ~(PWM_CSR_CSR0_Msk)) | (PWM_CLK_DIV_4 << PWM_CSR_CSR0_Pos);
-    PWMA->PCR |= PWM_PCR_CH0MOD_Msk;
-    PWMA->CMR0 = 99;
-    PWMA->CNR0 = 199;
-    PWMA->POE |= PWM_POE_PWM0_Msk;
-    PWMA->PCR |= PWM_PCR_CH0EN_Msk;
-	PWMA->PIER = PWM_PIER_PWMIE0_Msk;
+
+	PwmInit();
 
 	TimmingPortInit();
-	TimmingTask();
 
-	//NVIC_EnableIRQ(UART0_IRQn);
-	NVIC_EnableIRQ(PWMA_IRQn);
-
+//NVIC_EnableIRQ(UART0_IRQn);
 	while (1){
-//		TimmingGetMs();
-//		TimmingDiffMs();
-		AdcGetChannelVoltage(0);
-		AdcGetChannelVoltage(1);
-//		SerialPortTask();
-//		SerialPortReceiverGetByte();
-//		SerialPortReceiverClear();
-//		SerialPortTransmitterWriteByte();
-//		SerialPortTransmitterSend();
-
-
+		TimmingTask();
+		AdcTask();
+		PwmTask();
+		SerialPortTask();
 		for(volatile uint32_t t = 0 ;t < 1000000;t++);
 	};
 }

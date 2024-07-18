@@ -32,6 +32,10 @@ void SerialPortTask() {
 //			UART0->RBR = 1<<1;
 //			RxBuf=0;
 //	}}
+	//		SerialPortReceiverGetByte();
+	//		SerialPortReceiverClear();
+	//		SerialPortTransmitterWriteByte();
+	//		SerialPortTransmitterSend();
 }
 
 uint32_t SerialPortIsReceived(UART_T *uart) {
